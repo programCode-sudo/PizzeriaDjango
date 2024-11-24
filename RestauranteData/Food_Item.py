@@ -1,3 +1,4 @@
+#RestauranteData/Food_Item.py
 from django.db import models
 #modelo de los items de comida del resturante (menu)
 class FoodItem(models.Model):

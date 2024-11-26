@@ -5,6 +5,10 @@ from Administrator.models import Administrator
 from Customer.models import Customer
 from RestauranteData.models import Restaurante
 from django.db import transaction
+from Delivery_Person.models import Delivery_Person
+from Menu_Manager.models import Menu_Manager
+from Order_Dispatcher.models import Order_Dispatcher
+from Order_Manager.models import Order_Manager
 
 class RegisterSerializer(serializers.ModelSerializer):
     role = serializers.ChoiceField(choices=BaseUser.ROLE_CHOICES)
@@ -36,6 +40,14 @@ class RegisterSerializer(serializers.ModelSerializer):
                 Customer.objects.create(user=user, restaurante=restaurant)
             elif validated_data['role'] == 'administrator':
                 Administrator.objects.create(user=user, restaurante=restaurant)
+            elif validated_data['role'] == 'delivery_person':
+                Delivery_Person.objects.create(user=user)
+            elif validated_data['role'] == 'menu_manager':
+                Menu_Manager.objects.create(user=user,restaurante=restaurant)
+            elif validated_data['role'] == 'order_dispatcher':
+                Order_Dispatcher.objects.create(user=user,restaurante=restaurant)
+            elif validated_data['role'] == 'order_manager':
+                Order_Manager.objects.create(user=user,restaurante=restaurant)
 
         return user
 

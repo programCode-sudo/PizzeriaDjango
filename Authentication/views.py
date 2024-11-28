@@ -30,6 +30,8 @@ class RegisterView(APIView):
                     "user": {
                         "username": user.username,
                         "email": user.email,
+                        "first_name": user.first_name,
+                        "last_name": user.last_name,
                         "role": user.role,
                     },
                     "tokens": tokens,
@@ -65,6 +67,13 @@ class LoginView(APIView):
         return Response(
             {
                 "message": "Login successful.",
+                "user": {
+                    "username": user.username,
+                    "email": user.email,
+                    "first_name": user.first_name,
+                    "last_name": user.last_name,
+                    "role": user.role,
+                },
                 "tokens": tokens,
             },
             status=status.HTTP_200_OK,

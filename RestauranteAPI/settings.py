@@ -47,7 +47,8 @@ INSTALLED_APPS = [
     'Menu_Manager',
     'Pedidos',
     'Delivery_Person',
-    'Order_Dispatcher'
+    'Order_Dispatcher',
+    'corsheaders',
 ]
 
 MIDDLEWARE = [
@@ -58,6 +59,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
 ]
 
 ROOT_URLCONF = 'RestauranteAPI.urls'
@@ -140,3 +142,5 @@ REST_FRAMEWORK = {
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
 }
+
+CORS_ALLOW_ALL_ORIGINS = True

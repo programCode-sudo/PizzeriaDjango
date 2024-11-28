@@ -1,3 +1,4 @@
+# Authentication/serializers.py
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import BaseUser
@@ -12,12 +13,24 @@ from Order_Manager.models import Order_Manager
 
 class RegisterSerializer(serializers.ModelSerializer):
     role = serializers.ChoiceField(choices=BaseUser.ROLE_CHOICES)
+    first_name = serializers.CharField(required=True)
+    last_name = serializers.CharField(required=True)
 
     class Meta:
         model = BaseUser
-        fields = ['username', 'password', 'email', 'role']
+        fields = ['username', 'password', 'email', 'first_name', 'last_name', 'role']
 
     password = serializers.CharField(write_only=True)
+
+    def validate_email(self, value):
+        if BaseUser.objects.filter(email=value).exists():
+            raise serializers.ValidationError("This email is already registered.")
+        return value
+
+    def validate_username(self, value):
+        if BaseUser.objects.filter(username=value).exists():
+            raise serializers.ValidationError("This username is already taken.")
+        return value
 
     def create(self, validated_data):
         password = validated_data.pop('password')
@@ -43,18 +56,10 @@ class RegisterSerializer(serializers.ModelSerializer):
             elif validated_data['role'] == 'delivery_person':
                 Delivery_Person.objects.create(user=user)
             elif validated_data['role'] == 'menu_manager':
-                Menu_Manager.objects.create(user=user,restaurante=restaurant)
+                Menu_Manager.objects.create(user=user, restaurante=restaurant)
             elif validated_data['role'] == 'order_dispatcher':
-                Order_Dispatcher.objects.create(user=user,restaurante=restaurant)
+                Order_Dispatcher.objects.create(user=user, restaurante=restaurant)
             elif validated_data['role'] == 'order_manager':
-                Order_Manager.objects.create(user=user,restaurante=restaurant)
+                Order_Manager.objects.create(user=user, restaurante=restaurant)
 
         return user
-
-class UserTokenSerializer(serializers.ModelSerializer):
-    acces_token = serializers.CharField(read_only=True)
-    refresh_token = serializers.CharField(read_only=True)
-
-    class Meta:
-        model = BaseUser
-        fields = ['username', 'acces_token', 'refresh_token']

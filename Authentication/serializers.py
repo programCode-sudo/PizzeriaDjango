@@ -63,3 +63,36 @@ class RegisterSerializer(serializers.ModelSerializer):
                 Order_Manager.objects.create(user=user, restaurante=restaurant)
 
         return user
+
+
+class EditUserSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, required=False)  # Contraseña opcional
+
+    class Meta:
+        model = BaseUser
+        fields = ['username', 'email', 'first_name', 'last_name', 'role', 'password']
+
+    def validate_email(self, value):
+        user_id = self.instance.id  # ID del usuario que se está editando
+        if BaseUser.objects.filter(email=value).exclude(id=user_id).exists():
+            raise serializers.ValidationError("This email is already registered.")
+        return value
+
+    def validate_username(self, value):
+        user_id = self.instance.id
+        if BaseUser.objects.filter(username=value).exclude(id=user_id).exists():
+            raise serializers.ValidationError("This username is already taken.")
+        return value
+
+    def update(self, instance, validated_data):
+        # Si se proporciona contraseña, actualizarla con hashing
+        password = validated_data.pop('password', None)
+        if password:
+            instance.set_password(password)
+
+        # Actualizar otros campos
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+
+        instance.save()
+        return instance

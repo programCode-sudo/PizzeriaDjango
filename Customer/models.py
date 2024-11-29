@@ -8,6 +8,7 @@ from RestauranteData.models import FoodItem
 class Customer(models.Model):
     user = models.OneToOneField(BaseUser,on_delete=models.CASCADE)
     restaurante = models.ForeignKey(Restaurante, on_delete=models.CASCADE)
+    phone = models.IntegerField(default=0)
     
     def __str__(self):
         return self.user.username

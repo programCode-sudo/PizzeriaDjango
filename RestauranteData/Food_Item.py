@@ -7,6 +7,7 @@ class FoodItem(models.Model):
     category = models.CharField(max_length=255)
     unitPrice = models.FloatField()
     stockRestaurant = models.IntegerField(default=0);
+    image = models.ImageField(upload_to='food_items/',null=True,blank=True)
 
     def _str_(self):
         return self.name

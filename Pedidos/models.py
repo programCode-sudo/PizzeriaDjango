@@ -14,7 +14,7 @@ class Pedido (models.Model):
     order_manager=models.ForeignKey(Order_Manager,null=True,on_delete=models.SET_NULL,blank=True)
     order_dispatcher=models.ForeignKey(Order_Dispatcher,null=True,on_delete=models.SET_NULL,blank=True)
     delivery_person=models.ForeignKey(Delivery_Person,null=True,on_delete=models.SET_NULL,blank=True)
-    food_items = models.ManyToManyField(FoodItem, through='PedidoFoodItem')
+    Total=models.DecimalField(max_digits=10,decimal_places=2,default=0)
 
     def __str__(self):
         return f"Pedido {self.id} - {self.description}"
@@ -23,8 +23,10 @@ class Pedido (models.Model):
 
 class PedidoFoodItem(models.Model):
     pedido = models.ForeignKey(Pedido , on_delete=models.CASCADE)
-    food_item = models.ForeignKey (FoodItem , on_delete=models.CASCADE)
-    quantity = models.IntegerField()
+    food_item_name = models.CharField(max_length=255,null=True,blank=True)
+    food_item_price = models.DecimalField(max_digits=10,decimal_places=2,default=0)
+    food_item_image = models.ImageField(upload_to='Pedidos_Img_items/',null=True,blank=True)
+    quantity = models.IntegerField(default=0)
 
     def __str__(self):
-        return f"{self.food_item.name} - {self.quantity}"
+        return f"{self.food_item_name} - {self.quantity}"

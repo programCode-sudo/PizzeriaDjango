@@ -5,6 +5,7 @@ from Authentication.models import BaseUser
 from rest_framework import serializers
 from rest_framework.pagination import PageNumberPagination
 from django.shortcuts import get_object_or_404
+from RestauranteData.models import Restaurante
 from Authentication.serializers import RegisterSerializer,EditUserSerializer
 
 class DeleteUserView(APIView):
@@ -134,3 +135,45 @@ class EditUserView(APIView):
         
         # Si los datos no son válidos, devolver los errores
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+class ToggleLoyaltyPointsView(APIView):
+    """
+    Vista para activar o desactivar los puntos de lealtad en un restaurante.
+    """
+    def post(self, request, restaurante_id, *args, **kwargs):
+        try:
+            # Obtener el restaurante por ID
+            restaurante = Restaurante.objects.get(id=restaurante_id)
+        except Restaurante.DoesNotExist:
+            return Response({"error": "Restaurante no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Alternar el estado de los puntos de lealtad
+        restaurante.lealtad_points = not restaurante.lealtad_points
+        restaurante.save()
+
+        return Response(
+            {"message": f"Puntos de lealtad {'activados' if restaurante.lealtad_points else 'desactivados'}.", 
+             "lealtad_points": restaurante.lealtad_points},
+            status=status.HTTP_200_OK
+        )
+
+class ToggleCuponsView(APIView):
+    """
+    Vista para activar o desactivar los cupones en un restaurante.
+    """
+    def post(self, request, restaurante_id, *args, **kwargs):
+        try:
+            # Obtener el restaurante por ID
+            restaurante = Restaurante.objects.get(id=restaurante_id)
+        except Restaurante.DoesNotExist:
+            return Response({"error": "Restaurante no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Alternar el estado de los cupones
+        restaurante.cupons = not restaurante.cupons
+        restaurante.save()
+
+        return Response(
+            {"message": f"Cupones {'activados' if restaurante.cupons else 'desactivados'}.", 
+             "cupons": restaurante.cupons},
+            status=status.HTTP_200_OK
+        )

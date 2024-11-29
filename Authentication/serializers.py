@@ -3,13 +3,14 @@ from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import BaseUser
 from Administrator.models import Administrator
-from Customer.models import Customer
+from Customer.models import Customer,Cart
 from RestauranteData.models import Restaurante
 from django.db import transaction
 from Delivery_Person.models import Delivery_Person
 from Menu_Manager.models import Menu_Manager
 from Order_Dispatcher.models import Order_Dispatcher
 from Order_Manager.models import Order_Manager
+
 
 class RegisterSerializer(serializers.ModelSerializer):
     role = serializers.ChoiceField(choices=BaseUser.ROLE_CHOICES)
@@ -50,7 +51,9 @@ class RegisterSerializer(serializers.ModelSerializer):
 
             # Asociar el restaurante según el rol
             if validated_data['role'] == 'customer':
-                Customer.objects.create(user=user, restaurante=restaurant)
+                customer = Customer.objects.create(user=user, restaurante=restaurant)
+                # Crear el carrito para el cliente
+                Cart.objects.create(customer=customer)
             elif validated_data['role'] == 'administrator':
                 Administrator.objects.create(user=user, restaurante=restaurant)
             elif validated_data['role'] == 'delivery_person':

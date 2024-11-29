@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 import os
+from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -154,3 +155,11 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR,'static')
 ]
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),  # Tiempo de expiración del access token
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),  # Tiempo de expiración del refresh token
+    'ROTATE_REFRESH_TOKENS': True,  # Activar la rotación de refresh tokens
+    'BLACKLIST_AFTER_ROTATION': True,  # Blacklist para refresh tokens rotados
+    'UPDATE_LAST_LOGIN': True,  # Actualiza la fecha de último login cuando se renueva el token
+}

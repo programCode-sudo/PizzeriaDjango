@@ -34,7 +34,15 @@ class GetAllFoodItemsView(APIView):
         for item in  serializer.data:
             item['image_url'] = request.build_absolute_uri(item['image'])
         return Response(serializer.data,status=status.HTTP_200_OK)
-    
+
+class GetActiveFoodItemsView(APIView):
+    def get(self, request):
+        food_items = FoodItem.objects.filter(isActive=True)
+        serializer = FoodItemSerializer(food_items, many=True)
+        for item in serializer.data:
+            item['image_url'] = request.build_absolute_uri(item['image'])
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
 class DeleteFoodItemView(APIView):
     def delete(self, request, food_item_id):
         try:
@@ -85,3 +93,20 @@ class GetOneFoodItemByIdView(APIView):
             return Response(food_item_data, status=status.HTTP_200_OK)
         except FoodItem.DoesNotExist:
             return Response({"error": "Food item no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+
+class ChangeFoodItemStatusView(APIView):
+    def post(self, request, fooditem_id):
+        try:
+            food_item = FoodItem.objects.get(id=fooditem_id)
+            new_status = request.data.get('isActive', None)
+            if new_status is None:
+                return Response({'message': 'Debe proporcionar el estado isActive (True o False).'}, status=status.HTTP_400_BAD_REQUEST)
+            if not isinstance(new_status, bool):
+                return Response({'message': 'El estado isActive debe ser True o False.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            food_item.isActive = new_status
+            food_item.save()
+
+            return Response({'message': f'El estado del FoodItem con id {fooditem_id} ha sido actualizado a {new_status} con éxito.'}, status=status.HTTP_200_OK)
+        except FoodItem.DoesNotExist:
+            return Response({'message': 'El FoodItem no existe.'}, status=status.HTTP_404_NOT_FOUND)

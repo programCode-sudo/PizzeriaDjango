@@ -12,6 +12,7 @@ class Customer(models.Model):
     restaurante = models.ForeignKey(Restaurante, on_delete=models.CASCADE)
     phone = models.IntegerField(default=0)
     comprasRealizadas = models.IntegerField(default=0)
+    customer_addres = models.CharField(max_length=255,null=True,blank=True)
     
     def __str__(self):
         return self.user.username

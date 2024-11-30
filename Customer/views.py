@@ -3,9 +3,10 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from rest_framework.views import APIView
 from .models import Cart, CartItem, Customer,LoyaltyPoint,Coupon
-from .serializers import CartItemSerializer
+from .serializers import CartItemSerializer,CustomerProfileSerializer
 from RestauranteData.models import FoodItem
 from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 class AddToCartView(APIView):
     def post(self, request, *args, **kwargs):
@@ -43,7 +44,7 @@ class AddToCartView(APIView):
             cart_item.save()
 
         return Response({"detail": "Item agregado al carrito exitosamente."}, status=status.HTTP_200_OK)
-    
+
 class GetCartItemsView(APIView):
     permission_classes = [IsAuthenticated]  # Asegura que el usuario esté autenticado
 
@@ -134,7 +135,7 @@ class DeleteCartItemByFoodNameView(APIView):
 
         # Retornar una respuesta exitosa
         return Response({"detail": "El item de carrito ha sido eliminado."}, status=status.HTTP_204_NO_CONTENT)
-    
+
 class AddLoyaltyPointsView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -149,17 +150,16 @@ class AddLoyaltyPointsView(APIView):
         if not isinstance(points_to_add, int) or points_to_add <= 0:
             return Response({"error": "La cantidad de puntos debe ser un entero positivo"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Crear un registro de puntos
-        LoyaltyPoint.objects.create(customer=customer, points=points_to_add)
+        # Verificar si el cliente ya tiene un registro de LoyaltyPoint
+        loyalty_point, created = LoyaltyPoint.objects.get_or_create(customer=customer, defaults={"points": 0})
 
-        # Calcular los puntos totales no expirados
-        total_points = sum(
-            point.points for point in customer.loyalty_points.all() if not point.is_expired()
-        )
+        # Si ya existía, suma los nuevos puntos al registro actual
+        loyalty_point.points += points_to_add
+        loyalty_point.save()
 
         return Response({
             "message": "Puntos añadidos exitosamente",
-            "total_points": total_points
+            "total_points": loyalty_point.points
         }, status=status.HTTP_200_OK)
 
 class DeleteLoyaltyPointsView(APIView):
@@ -216,3 +216,70 @@ class DeleteCouponView(APIView):
         # Eliminar el cupón
         coupon.delete()
         return Response({"detail": "Cupón eliminado con éxito."}, status=status.HTTP_200_OK)
+
+class AssignPhoneNumberView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        user = request.user
+
+        # Verificar si el usuario tiene un perfil de cliente
+        try:
+            customer = user.customer
+        except AttributeError:
+            return Response({"detail": "El usuario no tiene un perfil de cliente."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Obtener el número de teléfono del cuerpo de la solicitud
+        phone_number = request.data.get("phone", "")
+
+        # Verificar que el número de teléfono tenga exactamente 8 dígitos y sea un número
+        if not phone_number.isdigit() or len(phone_number) != 8:
+            return Response({"detail": "El número de teléfono debe tener exactamente 8 dígitos."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Asignar el número de teléfono al perfil del cliente
+        customer.phone = phone_number
+        customer.save()
+
+        return Response({"detail": "Número de teléfono asignado exitosamente."}, status=status.HTTP_200_OK)
+
+class AssignAddressView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        user = request.user
+
+        # Verificar si el usuario tiene un perfil de cliente
+        try:
+            customer = user.customer
+        except AttributeError:
+            return Response({"detail": "El usuario no tiene un perfil de cliente."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Obtener la dirección del cuerpo de la solicitud
+        address = request.data.get("address", "")
+
+        # Verificar que la dirección no esté vacía
+        if not address:
+            return Response({"detail": "La dirección no puede estar vacía."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Asignar la dirección al perfil del cliente
+        customer.customer_addres = address
+        customer.save()
+
+        return Response({"detail": "Dirección asignada exitosamente."}, status=status.HTTP_200_OK)
+
+class CustomerProfileView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        user = request.user
+
+        # Verificar si el usuario tiene un perfil de cliente
+        try:
+            customer = user.customer
+        except AttributeError:
+            return Response({"detail": "El usuario no tiene un perfil de cliente."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Serializar los datos del perfil del cliente
+        serializer = CustomerProfileSerializer(customer)
+        return Response(serializer.data, status=status.HTTP_200_OK)

@@ -30,4 +30,8 @@ urlpatterns = [
     path('customer/',include('Customer.urls')),
     path('api/token/',TokenObtainPairView.as_view(),name='token_obtain_pair'),
     path('api/token/refresh/',TokenRefreshView.as_view(),name='token_refresh'),
+    path('pedidos/',include('Pedidos.urls')),
+    path('order_manager/',include('Order_Manager.urls')),
+    path('delivery_person/',include('Delivery_Person.urls')),
+    path('order_dispatcher/',include('Order_Dispatcher.urls'))
 ]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

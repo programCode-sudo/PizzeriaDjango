@@ -8,6 +8,7 @@ class FoodItem(models.Model):
     unitPrice = models.FloatField()
     stockRestaurant = models.IntegerField(default=0);
     image = models.ImageField(upload_to='food_items/',null=True,blank=True)
+    isActive = models.BooleanField(default=True)
 
     def _str_(self):
         return self.name

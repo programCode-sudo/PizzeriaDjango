@@ -5,4 +5,4 @@ from RestauranteData.Food_Item import FoodItem
 class FoodItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = FoodItem
-        fields = ['name', 'description', 'category', 'unitPrice', 'stockRestaurant', 'image']
+        fields = ['id','name', 'description', 'category', 'unitPrice', 'stockRestaurant', 'image']

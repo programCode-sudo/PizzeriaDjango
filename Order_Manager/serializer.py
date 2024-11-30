@@ -1,64 +1,88 @@
 from rest_framework import serializers
-from Pedidos.models import Pedido,PedidoFoodItem
-from RestauranteData.Food_Item import FoodItem
-from Order_Manager.models import Order_Manager
-
-class PedidoFoodItemSerializer(serializers.Serializer):
-    id = serializers.IntegerField()  # ID del FoodItem
-    quantity = serializers.IntegerField(min_value=1)  # Cantidad
+from Pedidos.models import Pedido, PedidoFoodItem
+from RestauranteData.models import FoodItem
 
 class PedidoSerializer(serializers.ModelSerializer):
-    food_items = PedidoFoodItemSerializer(many=True)
-    order_manager_id = serializers.IntegerField(required=True)
-    caller_name = serializers.CharField(max_length=255)
-    caller_address = serializers.CharField(max_length=255)
-    caller_phone = serializers.CharField(max_length=15)
-
+    food_items = serializers.ListField(
+        child=serializers.DictField(child=serializers.IntegerField()),  # Lista de objetos con ID y quantity
+        write_only=True  # No se incluirá en la representación de la respuesta
+    )
+    
     class Meta:
         model = Pedido
-        fields = ['description', 'caller_name', 'caller_address', 'caller_phone', 'order_manager_id', 'food_items']
-
-    def validate_order_manager_id(self, value):
-        try:
-            Order_Manager.objects.get(id=value)
-        except Order_Manager.DoesNotExist:
-            raise serializers.ValidationError("Order Manager no encontrado.")
-        return value
-
-    def validate_food_items(self, value):
-        for item in value:
-            try:
-                food_item = FoodItem.objects.get(id=item['id'])
-                if food_item.stockRestaurant < item['quantity']:
-                    raise serializers.ValidationError(
-                        f"Stock insuficiente para {food_item.name}. Disponible: {food_item.stockRestaurant}"
-                    )
-            except FoodItem.DoesNotExist:
-                raise serializers.ValidationError(f"FoodItem con ID {item['id']} no encontrado.")
-        return value
-
+        fields = ['customer_name', 'customer_email', 'customer_phone', 'address', 'description', 'food_items']
+    
     def create(self, validated_data):
-        # Obtener Order Manager
-        order_manager = Order_Manager.objects.get(id=validated_data['order_manager_id'])
-
+        food_items_data = validated_data.pop('food_items')
+        
+        # Validar que todos los food_item_id existan
+        food_item_ids = [item['food_item_id'] for item in food_items_data]
+        existing_food_items = FoodItem.objects.filter(id__in=food_item_ids)
+        if existing_food_items.count() != len(food_item_ids):
+            raise serializers.ValidationError("Uno o más food_item_id no son válidos. Verifica los datos enviados.")
+        
+        # Configurar estado automáticamente en "Pendiente"
+        validated_data['status'] = 'Pendiente'
+        
         # Crear el pedido
-        pedido = Pedido.objects.create(
-            description=validated_data.get('description', 'Pedido por llamada'),
-            address=validated_data['caller_address'],
-            status="En_Espera",
-            order_manager=order_manager,
-            caller_name=validated_data['caller_name'],
-            caller_phone=validated_data['caller_phone'],
-        )
-
-        # Asociar food_items
-        food_items = validated_data['food_items']
-        for item in food_items:
-            food_item = FoodItem.objects.get(id=item['id'])
-            PedidoFoodItem.objects.create(pedido=pedido, food_item=food_item, quantity=item['quantity'])
-
+        pedido = Pedido.objects.create(**validated_data)
+        
+        # Crear los food_items asociados al pedido y reducir el stock
+        total_price = 0
+        for item_data in food_items_data:
+            food_item = existing_food_items.get(id=item_data['food_item_id'])
+            quantity = item_data['quantity']
+            
+            # Verificar que hay suficiente stock
+            if food_item.stockRestaurant < quantity:
+                raise serializers.ValidationError(f"No hay suficiente stock para el artículo {food_item.name}.")
+            
             # Reducir el stock
-            food_item.stockRestaurant -= item['quantity']
+            food_item.stockRestaurant -= quantity
             food_item.save()
-
+            
+            # Calcular el precio total
+            total_price += food_item.unitPrice * quantity
+            
+            PedidoFoodItem.objects.create(
+                pedido=pedido,
+                food_item_name=food_item.name,
+                food_item_price=food_item.unitPrice,
+                quantity=quantity,
+                food_item_description=food_item.description,
+                food_item_image=food_item.image
+            )
+        
+        # Actualizar el total del pedido
+        pedido.Total = total_price
+        pedido.save()
+        
         return pedido
+
+class PedidoFoodItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PedidoFoodItem
+        fields = ['food_item_name', 'food_item_price', 'quantity', 'food_item_description', 'food_item_image']
+
+class PedidoSerializerPersonalizado(serializers.ModelSerializer):
+    food_items = PedidoFoodItemSerializer(source='pedidofooditem_set', many=True)
+    
+    class Meta:
+        model = Pedido
+        fields = ['id', 'created_at', 'description', 'address', 'status', 
+                  'customer_name', 'customer_email', 'customer_phone', 
+                  'order_manager', 'order_dispatcher', 'delivery_person', 
+                  'Total', 'food_items']
+
+    def to_representation(self, instance):
+        # Convertir el pedido en una representación JSON
+        data = super().to_representation(instance)
+        
+        # Si el pedido tiene un cliente relacionado, usamos los datos del cliente
+        if instance.customer:
+            customer = instance.customer
+            data['customer_name'] = customer.user.username
+            data['customer_email'] = customer.user.email
+            data['customer_phone'] = customer.phone
+        
+        return data

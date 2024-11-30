@@ -6,7 +6,7 @@ from Authentication.models import BaseUser
 # Create your models here.
 class Delivery_Person(models.Model):
     user = models.OneToOneField(BaseUser,on_delete=models.CASCADE)
-    
+    is_online = models.BooleanField(default=False)
     
     def __str__(self):
         return self.user.username

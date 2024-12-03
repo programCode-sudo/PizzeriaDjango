@@ -169,3 +169,8 @@ SIMPLE_JWT = {
 
 ALLOWED_HOSTS = ['*']
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
+
+CSRF_TRUSTED_ORIGINS = [
+    'http://*','https://web-production-3c69.up.railway.app'
+]

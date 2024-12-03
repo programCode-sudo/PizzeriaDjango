@@ -62,6 +62,8 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
 ]
 
 ROOT_URLCONF = 'RestauranteAPI.urls'
@@ -155,6 +157,7 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR,'static')
 ]
+STATIC_ROOT = os.path.join(BASE_DIR,'staticfiles')
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),  # Tiempo de expiración del access token
@@ -165,3 +168,4 @@ SIMPLE_JWT = {
 }
 
 ALLOWED_HOSTS = ['*']
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"

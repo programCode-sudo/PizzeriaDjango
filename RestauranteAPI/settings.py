@@ -163,3 +163,5 @@ SIMPLE_JWT = {
     'BLACKLIST_AFTER_ROTATION': True,  # Blacklist para refresh tokens rotados
     'UPDATE_LAST_LOGIN': True,  # Actualiza la fecha de último login cuando se renueva el token
 }
+
+ALLOWED_HOSTS = ['*']

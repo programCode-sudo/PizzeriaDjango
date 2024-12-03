@@ -7,7 +7,32 @@ from .serializer import PedidoSerializer,PedidoSerializerPersonalizado
 from Delivery_Person.models import Delivery_Person
 from Delivery_Person.serializers import DeliveryPersonSerializer
 from RestauranteAPI.customPagination import CustomPageNumberPagination
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
+from rest_framework import serializers
+
 class CreatePedidoAPIView(APIView):
+
+    @swagger_auto_schema(
+        operation_description="Crear un nuevo pedido en el sistema. pasa una lista de ids de fooditems",
+        request_body=PedidoSerializer,
+        responses={
+            201: openapi.Response(
+                description="Pedido creado con éxito",
+                schema=PedidoSerializer
+            ),
+            400: openapi.Response(
+                description="Error al crear el pedido",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'detail': openapi.Schema(type=openapi.TYPE_STRING, description='Descripción del error')
+                    }
+                )
+            ),
+        }
+    )
+
     def post(self, request, *args, **kwargs):
         serializer = PedidoSerializer(data=request.data)
         if serializer.is_valid():
@@ -20,6 +45,26 @@ class CreatePedidoAPIView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class ListarPedidosAPIView(APIView):
+
+    @swagger_auto_schema(
+        operation_description="Obtener todos los pedidos en el sistema, con paginación.",
+        responses={
+            200: openapi.Response(
+                description="Lista de pedidos paginada.",
+                schema=PedidoSerializerPersonalizado(many=True)
+            ),
+            400: openapi.Response(
+                description="Error al obtener los pedidos.",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'detail': openapi.Schema(type=openapi.TYPE_STRING, description='Descripción del error')
+                    }
+                )
+            )
+        }
+    )
+
     def get(self, request, *args, **kwargs):
         # Obtener todos los pedidos
         pedidos = Pedido.objects.all()
@@ -35,6 +80,43 @@ class ListarPedidosAPIView(APIView):
         return paginator.get_paginated_response(serializer.data)
     
 class CancelarPedidoAPIView(APIView):
+
+    @swagger_auto_schema(
+        operation_description="Cancelar un pedido mediante su ID.",
+        responses={
+            200: openapi.Response(
+                description="Pedido cancelado con éxito.",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'message': openapi.Schema(type=openapi.TYPE_STRING, description='Mensaje de éxito')
+                    }
+                )
+            ),
+            400: openapi.Response(
+                description="El pedido ya está cancelado o no se encuentra.",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'message': openapi.Schema(type=openapi.TYPE_STRING, description='Mensaje de error')
+                    }
+                )
+            ),
+            404: openapi.Response(
+                description="Pedido no encontrado.",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'message': openapi.Schema(type=openapi.TYPE_STRING, description='Mensaje de error')
+                    }
+                )
+            )
+        },
+        manual_parameters=[
+            openapi.Parameter('pedido_id', openapi.IN_PATH, description="ID del pedido a cancelar", type=openapi.TYPE_INTEGER)
+        ]
+    )
+
     def post(self, request, pedido_id, *args, **kwargs):
         try:
             # Obtener el pedido
@@ -53,6 +135,43 @@ class CancelarPedidoAPIView(APIView):
             return Response({'message': 'El pedido no existe.'}, status=status.HTTP_404_NOT_FOUND)
 
 class BorrarPedidoAPIView(APIView):
+
+    @swagger_auto_schema(
+        operation_description="Borrar un pedido cancelado mediante su ID.",
+        responses={
+            200: openapi.Response(
+                description="Pedido borrado con éxito.",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'message': openapi.Schema(type=openapi.TYPE_STRING, description='Mensaje de éxito')
+                    }
+                )
+            ),
+            400: openapi.Response(
+                description="El pedido no está cancelado o no puede ser borrado.",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'message': openapi.Schema(type=openapi.TYPE_STRING, description='Mensaje de error')
+                    }
+                )
+            ),
+            404: openapi.Response(
+                description="Pedido no encontrado.",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'message': openapi.Schema(type=openapi.TYPE_STRING, description='Mensaje de error')
+                    }
+                )
+            )
+        },
+        manual_parameters=[
+            openapi.Parameter('pedido_id', openapi.IN_PATH, description="ID del pedido a borrar", type=openapi.TYPE_INTEGER)
+        ]
+    )
+
     def delete(self, request, pedido_id, *args, **kwargs):
         try:
             # Obtener el pedido
@@ -70,6 +189,29 @@ class BorrarPedidoAPIView(APIView):
             return Response({'message': 'El pedido no existe.'}, status=status.HTTP_404_NOT_FOUND)
 
 class VerPedidoDetalladoAPIView(APIView):
+
+    @swagger_auto_schema(
+        operation_description="Obtener detalles de un pedido mediante su ID.",
+        responses={
+            200: openapi.Response(
+                description="Detalles del pedido.",
+                schema=PedidoSerializerPersonalizado()
+            ),
+            404: openapi.Response(
+                description="Pedido no encontrado.",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'message': openapi.Schema(type=openapi.TYPE_STRING, description='Mensaje de error')
+                    }
+                )
+            )
+        },
+        manual_parameters=[
+            openapi.Parameter('pedido_id', openapi.IN_PATH, description="ID del pedido", type=openapi.TYPE_INTEGER)
+        ]
+    )
+
     def get(self, request, pedido_id, *args, **kwargs):
         try:
             # Obtener el pedido
@@ -83,6 +225,38 @@ class VerPedidoDetalladoAPIView(APIView):
             return Response({'message': 'El pedido no existe.'}, status=status.HTTP_404_NOT_FOUND)
         
 class ListarPedidosPorEstadoAPIView(APIView):
+
+    @swagger_auto_schema(
+        operation_description="Obtener todos los pedidos filtrados por el estado.",
+        responses={
+            200: openapi.Response(
+                description="Lista de pedidos filtrados por estado.",
+                schema=PedidoSerializerPersonalizado(many=True)
+            ),
+            400: openapi.Response(
+                description="No se proporcionó un estado.",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'message': openapi.Schema(type=openapi.TYPE_STRING, description='Mensaje de error')
+                    }
+                )
+            ),
+            404: openapi.Response(
+                description="No se encontraron pedidos con el estado proporcionado.",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'message': openapi.Schema(type=openapi.TYPE_STRING, description='Mensaje de error')
+                    }
+                )
+            )
+        },
+        manual_parameters=[
+            openapi.Parameter('status', openapi.IN_QUERY, description="Estado de los pedidos a filtrar", type=openapi.TYPE_STRING)
+        ]
+    )
+
     def get(self, request, *args, **kwargs):
         # Obtener el estado enviado desde el front
         estado = request.query_params.get('status', None)
@@ -107,6 +281,19 @@ class ListarPedidosPorEstadoAPIView(APIView):
         return paginator.get_paginated_response(serializer.data)
 
 class ListarRepartidoresAPIView(APIView):
+
+    @swagger_auto_schema(
+        operation_description="Obtiene la lista de repartidores filtrada por su estado online.",
+        responses={
+            200: openapi.Response('Lista de repartidores', DeliveryPersonSerializer),
+            400: 'Debe proporcionar el estado is_online (True o False).',
+            500: 'Error al obtener los repartidores.'
+        },
+        manual_parameters=[
+            openapi.Parameter('is_online', openapi.IN_QUERY, description="Estado online del repartidor", type=openapi.TYPE_BOOLEAN)
+        ]
+    )
+
     def get(self, request, *args, **kwargs):
         # Obtener el parámetro 'is_online' de la solicitud
         is_online = request.query_params.get('is_online', None)
@@ -128,6 +315,19 @@ class ListarRepartidoresAPIView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
     
 class ListarRepartidoresPaginationAPIView(APIView):
+
+    @swagger_auto_schema(
+        operation_description="Obtiene la lista paginada de repartidores filtrada por su estado online.",
+        responses={
+            200: openapi.Response('Lista paginada de repartidores', DeliveryPersonSerializer),
+            400: 'Debe proporcionar el estado is_online (True o False).',
+            500: 'Error al obtener los repartidores.'
+        },
+        manual_parameters=[
+            openapi.Parameter('is_online', openapi.IN_QUERY, description="Estado online del repartidor", type=openapi.TYPE_BOOLEAN)
+        ]
+    )
+
     def get(self, request, *args, **kwargs):
         # Obtener el parámetro 'is_online' de la solicitud
         is_online = request.query_params.get('is_online', None)
@@ -154,6 +354,30 @@ class ListarRepartidoresPaginationAPIView(APIView):
         return paginator.get_paginated_response(serializer.data)
     
 class AsociarRepartidorAPedidoAPIView(APIView):
+
+    @swagger_auto_schema(
+        operation_description="Asocia un repartidor a un pedido.",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['pedido_id', 'delivery_person_id'],
+            properties={
+                'pedido_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del pedido'),
+                'delivery_person_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del repartidor')
+            }
+        ),
+        responses={
+            200: openapi.Response(description="Pedido asociado exitosamente al repartidor.", schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    'message': openapi.Schema(type=openapi.TYPE_STRING, description='Mensaje de éxito')
+                }
+            )),
+            400: openapi.Response(description="Debe proporcionar tanto el ID del pedido como el del repartidor, o el pedido ya tiene un repartidor asignado."),
+            404: openapi.Response(description="Pedido o repartidor no encontrado."),
+            500: openapi.Response(description="Error al asociar el repartidor al pedido.")
+        }
+    )
+
     def post(self, request, *args, **kwargs):
         # Obtener los IDs del pedido y del repartidor desde los datos de la solicitud
         pedido_id = request.data.get('pedido_id', None)
@@ -190,3 +414,9 @@ class AsociarRepartidorAPedidoAPIView(APIView):
         
         except Delivery_Person.DoesNotExist:
             return Response({'message': 'El repartidor no existe.'}, status=status.HTTP_404_NOT_FOUND)
+
+
+
+
+
+

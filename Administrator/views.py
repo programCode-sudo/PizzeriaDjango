@@ -7,11 +7,29 @@ from rest_framework.pagination import PageNumberPagination
 from django.shortcuts import get_object_or_404
 from RestauranteData.models import Restaurante
 from Authentication.serializers import RegisterSerializer,EditUserSerializer
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 class DeleteUserView(APIView):
     """
     Vista para eliminar usuarios con roles específicos.
     """
+    @swagger_auto_schema(
+        operation_description="Elimina un usuario por su username y email.",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'username': openapi.Schema(type=openapi.TYPE_STRING, description='Nombre de usuario del usuario a eliminar'),
+                'email': openapi.Schema(type=openapi.TYPE_STRING, description='Email del usuario a eliminar'),
+                'role': openapi.Schema(type=openapi.TYPE_STRING, description='Rol del usuario a eliminar'),
+            }
+        ),
+        responses={
+            200: openapi.Response('Usuario eliminado exitosamente'),
+            400: openapi.Response('Error al eliminar usuario'),
+        }
+    )
+
 
     def post(self, request, *args, **kwargs):
         # Obtén los datos enviados desde el frontend
@@ -41,6 +59,25 @@ class GetAllUsersView(APIView):
     """
     Vista para obtener todos los usuarios con paginación, excluyendo a los usuarios con rol 'customer'.
     """
+    @swagger_auto_schema(
+        operation_description="Obtiene todos los usuarios, excluyendo a los que tienen rol 'customer'.",
+        responses={
+            200: openapi.Response(
+                'Lista de usuarios excluyendo los de rol "customer".',
+                openapi.Schema(
+                    type=openapi.TYPE_ARRAY,
+                    items=openapi.Items(type=openapi.TYPE_OBJECT, properties={
+                        'id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                        'username': openapi.Schema(type=openapi.TYPE_STRING),
+                        'email': openapi.Schema(type=openapi.TYPE_STRING),
+                        'role': openapi.Schema(type=openapi.TYPE_STRING)
+                    })
+                )
+            ),
+            400: openapi.Response('Error al obtener los usuarios'),
+        }
+    )
+
 
     def get(self, request, *args, **kwargs):
         # Filtrar usuarios que no tienen rol 'customer'
@@ -67,6 +104,27 @@ class GetUserByIdView(APIView):
     """
     Vista para obtener un solo usuario por su 'id', excluyendo los usuarios con rol 'customer'.
     """
+
+    @swagger_auto_schema(
+        operation_description="Obtiene un usuario específico por su ID, excluyendo los usuarios con rol 'customer'.",
+        responses={
+            200: openapi.Response(
+                'Usuario encontrado por ID.',
+                openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                        'username': openapi.Schema(type=openapi.TYPE_STRING),
+                        'email': openapi.Schema(type=openapi.TYPE_STRING),
+                        'role': openapi.Schema(type=openapi.TYPE_STRING)
+                    }
+                )
+            ),
+            404: openapi.Response('Usuario no encontrado'),
+        }
+    )
+
+
     def get(self, request, user_id, *args, **kwargs):
         try:
             # Obtener usuario por id, excluyendo aquellos con rol 'customer'
@@ -88,6 +146,25 @@ class GetUserByUsernameView(APIView):
     """
     Vista para obtener un solo usuario por su 'username', excluyendo los usuarios con rol 'customer'.
     """
+    @swagger_auto_schema(
+        operation_description="Obtiene un usuario específico por su username, excluyendo los usuarios con rol 'customer'.",
+        responses={
+            200: openapi.Response(
+                'Usuario encontrado por username.',
+                openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                        'username': openapi.Schema(type=openapi.TYPE_STRING),
+                        'email': openapi.Schema(type=openapi.TYPE_STRING),
+                        'role': openapi.Schema(type=openapi.TYPE_STRING)
+                    }
+                )
+            ),
+            404: openapi.Response('Usuario no encontrado'),
+        }
+    )
+
     def get(self, request, username, *args, **kwargs):
         try:
             # Obtener usuario por username, excluyendo aquellos con rol 'customer'
@@ -109,6 +186,33 @@ class EditUserView(APIView):
     """
     Vista para editar un usuario basado en su 'id', excluyendo los usuarios con rol 'customer'.
     """
+    @swagger_auto_schema(
+        operation_description="Edita un usuario por su ID, excluyendo los usuarios con rol 'customer'.",
+        request_body=EditUserSerializer,
+        responses={
+            200: openapi.Response(
+                'Usuario actualizado.',
+                openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'message': openapi.Schema(type=openapi.TYPE_STRING),
+                        'user': openapi.Schema(type=openapi.TYPE_OBJECT, properties={
+                            'id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                            'username': openapi.Schema(type=openapi.TYPE_STRING),
+                            'email': openapi.Schema(type=openapi.TYPE_STRING),
+                            'first_name': openapi.Schema(type=openapi.TYPE_STRING),
+                            'last_name': openapi.Schema(type=openapi.TYPE_STRING),
+                            'role': openapi.Schema(type=openapi.TYPE_STRING),
+                        })
+                    }
+                )
+            ),
+            400: openapi.Response('Error al actualizar el usuario'),
+            404: openapi.Response('Usuario no encontrado o no editable'),
+        }
+    )
+
+
     def put(self, request, user_id, *args, **kwargs):
         try:
             # Obtener usuario por id, excluyendo aquellos con rol 'customer'
@@ -140,6 +244,31 @@ class ToggleLoyaltyPointsView(APIView):
     """
     Vista para activar o desactivar los puntos de lealtad en un restaurante.
     """
+    @swagger_auto_schema(
+        operation_description="Activa o desactiva los puntos de lealtad de un restaurante.",
+        responses={
+            200: openapi.Response(
+                description="Operación exitosa",
+                examples={
+                    "application/json": {
+                        "message": "Puntos de lealtad activados.",
+                        "lealtad_points": True
+                    }
+                }
+            ),
+            404: openapi.Response(
+                description="Restaurante no encontrado.",
+                examples={
+                    "application/json": {
+                        "error": "Restaurante no encontrado."
+                    }
+                }
+            ),
+        },
+        request_body=None,
+    )
+
+
     def post(self, request, restaurante_id, *args, **kwargs):
         try:
             # Obtener el restaurante por ID
@@ -161,6 +290,32 @@ class ToggleCuponsView(APIView):
     """
     Vista para activar o desactivar los cupones en un restaurante.
     """
+    @swagger_auto_schema(
+        operation_description="Activa o desactiva los cupones de un restaurante.",
+        responses={
+            200: openapi.Response(
+                description="Operación exitosa",
+                examples={
+                    "application/json": {
+                        "message": "Cupones activados.",
+                        "cupons": True
+                    }
+                }
+            ),
+            404: openapi.Response(
+                description="Restaurante no encontrado.",
+                examples={
+                    "application/json": {
+                        "error": "Restaurante no encontrado."
+                    }
+                }
+            ),
+        },
+        request_body=None,
+    )
+
+
+
     def post(self, request, restaurante_id, *args, **kwargs):
         try:
             # Obtener el restaurante por ID

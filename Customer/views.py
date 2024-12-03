@@ -7,8 +7,52 @@ from .serializers import CartItemSerializer,CustomerProfileSerializer
 from RestauranteData.models import FoodItem
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 class AddToCartView(APIView):
+
+    @swagger_auto_schema(
+        operation_description="Agrega un item al carrito del cliente. Si el item ya existe, se actualiza la cantidad.",
+        manual_parameters=[
+            openapi.Parameter(
+                'Authorization', 
+                openapi.IN_HEADER, 
+                description="Token JWT Bearer", 
+                type=openapi.TYPE_STRING, 
+                required=True
+            ),
+        ],
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'food_item': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del item de comida a agregar al carrito.'),
+                'quantity': openapi.Schema(type=openapi.TYPE_INTEGER, description='Cantidad del item de comida a agregar al carrito.')
+            },
+            required=['food_item', 'quantity']
+        ),
+        responses={
+            status.HTTP_200_OK: openapi.Response(
+                description="Item agregado exitosamente al carrito.",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'detail': openapi.Schema(type=openapi.TYPE_STRING, description='Mensaje de éxito.')
+                    }
+                )
+            ),
+            status.HTTP_400_BAD_REQUEST: openapi.Response(
+                description="Error en la solicitud (por ejemplo, item de comida no existe o cantidad no válida).",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'detail': openapi.Schema(type=openapi.TYPE_STRING, description='Mensaje de error.')
+                    }
+                )
+            )
+        }
+    )
+
     def post(self, request, *args, **kwargs):
         customer = request.user.customer  # Asumiendo que el usuario está autenticado
         food_item_id = request.data.get('food_item')
@@ -46,7 +90,68 @@ class AddToCartView(APIView):
         return Response({"detail": "Item agregado al carrito exitosamente."}, status=status.HTTP_200_OK)
 
 class GetCartItemsView(APIView):
+
     permission_classes = [IsAuthenticated]  # Asegura que el usuario esté autenticado
+
+    @swagger_auto_schema(
+        operation_description="Obtiene todos los items del carrito de un cliente autenticado.",
+        manual_parameters=[
+            openapi.Parameter(
+                'Authorization', 
+                openapi.IN_HEADER, 
+                description="Token JWT Bearer", 
+                type=openapi.TYPE_STRING, 
+                required=True
+            ),
+        ],
+        responses={
+            status.HTTP_200_OK: openapi.Response(
+                description="Items del carrito, puntos y cupones disponibles.",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'cart_items': openapi.Schema(
+                            type=openapi.TYPE_ARRAY,
+                            items=openapi.Schema(
+                                type=openapi.TYPE_OBJECT,
+                                properties={
+                                    'name': openapi.Schema(type=openapi.TYPE_STRING, description='Nombre del item de comida'),
+                                    'description': openapi.Schema(type=openapi.TYPE_STRING, description='Descripción del item de comida'),
+                                    'category': openapi.Schema(type=openapi.TYPE_STRING, description='Categoría del item'),
+                                    'unitPrice': openapi.Schema(type=openapi.TYPE_NUMBER, format=openapi.FORMAT_FLOAT, description='Precio unitario'),
+                                    'stockRestaurant': openapi.Schema(type=openapi.TYPE_INTEGER, description='Stock disponible en el restaurante'),
+                                    'image': openapi.Schema(type=openapi.TYPE_STRING, description='URL de la imagen del item'),
+                                    'quantity': openapi.Schema(type=openapi.TYPE_INTEGER, description='Cantidad en el carrito'),
+                                    'totalPrice': openapi.Schema(type=openapi.TYPE_NUMBER, format=openapi.FORMAT_FLOAT, description='Precio total por cantidad')
+                                }
+                            )
+                        ),
+                        'total_points': openapi.Schema(type=openapi.TYPE_INTEGER, description='Puntos de lealtad disponibles'),
+                        'available_coupons': openapi.Schema(
+                            type=openapi.TYPE_ARRAY,
+                            items=openapi.Schema(
+                                type=openapi.TYPE_OBJECT,
+                                properties={
+                                    'id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del cupón'),
+                                    'discount_amount': openapi.Schema(type=openapi.TYPE_NUMBER, format=openapi.FORMAT_FLOAT, description='Monto de descuento del cupón'),
+                                    'created_at': openapi.Schema(type=openapi.TYPE_STRING, description='Fecha de creación del cupón'),
+                                }
+                            )
+                        )
+                    }
+                )
+            ),
+            status.HTTP_400_BAD_REQUEST: openapi.Response(
+                description="Error en la solicitud (por ejemplo, carrito no encontrado).",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'detail': openapi.Schema(type=openapi.TYPE_STRING, description='Mensaje de error.')
+                    }
+                )
+            )
+        }
+    )
 
     def get(self, request, *args, **kwargs):
         # Obtener el usuario actual desde el token
@@ -101,7 +206,39 @@ class GetCartItemsView(APIView):
 
 class DeleteCartItemByFoodNameView(APIView):
     permission_classes = [IsAuthenticated]  # Asegura que el usuario esté autenticado
-
+    
+    @swagger_auto_schema(
+        operation_description="Elimina un item del carrito del usuario por su nombre.",
+        manual_parameters=[
+            openapi.Parameter(
+                'Authorization', 
+                openapi.IN_HEADER, 
+                description="Token JWT Bearer", 
+                type=openapi.TYPE_STRING, 
+                required=True
+            ),
+            openapi.Parameter(
+                'food_item_name', 
+                openapi.IN_PATH, 
+                description="Nombre del item de comida a eliminar", 
+                type=openapi.TYPE_STRING, 
+                required=True
+            ),
+        ],
+        responses={
+            status.HTTP_204_NO_CONTENT: openapi.Response(description="Item de carrito eliminado exitosamente."),
+            status.HTTP_400_BAD_REQUEST: openapi.Response(
+                description="Error en la solicitud (por ejemplo, el carrito o el item no existen).",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'detail': openapi.Schema(type=openapi.TYPE_STRING, description='Mensaje de error.')
+                    }
+                )
+            )
+        }
+    )
+    
     def delete(self, request, food_item_name, *args, **kwargs):
         # Obtener el usuario actual desde el token
         user = request.user
@@ -139,6 +276,63 @@ class DeleteCartItemByFoodNameView(APIView):
 class AddLoyaltyPointsView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(
+        operation_description="Añade puntos de lealtad a un cliente.",
+        manual_parameters=[
+            openapi.Parameter(
+                'Authorization', 
+                openapi.IN_HEADER, 
+                description="Token JWT Bearer", 
+                type=openapi.TYPE_STRING, 
+                required=True
+            ),
+            openapi.Parameter(
+                'customer_id', 
+                openapi.IN_PATH, 
+                description="ID del cliente al que se le añadirán los puntos", 
+                type=openapi.TYPE_INTEGER, 
+                required=True
+            )
+        ],
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'points': openapi.Schema(type=openapi.TYPE_INTEGER, description='Cantidad de puntos a añadir')
+            },
+            required=['points']
+        ),
+        responses={
+            status.HTTP_200_OK: openapi.Response(
+                description="Puntos añadidos exitosamente.",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'message': openapi.Schema(type=openapi.TYPE_STRING, description='Mensaje de éxito'),
+                        'total_points': openapi.Schema(type=openapi.TYPE_INTEGER, description='Total de puntos del cliente')
+                    }
+                )
+            ),
+            status.HTTP_400_BAD_REQUEST: openapi.Response(
+                description="Error en la solicitud (por ejemplo, cantidad de puntos no válida).",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={ 
+                        'error': openapi.Schema(type=openapi.TYPE_STRING, description='Mensaje de error')
+                    }
+                )
+            ),
+            status.HTTP_404_NOT_FOUND: openapi.Response(
+                description="Cliente no encontrado.",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={ 
+                        'error': openapi.Schema(type=openapi.TYPE_STRING, description='Mensaje de error')
+                    }
+                )
+            )
+        }
+    )
+
     def post(self, request, customer_id, *args, **kwargs):
         try:
             customer = Customer.objects.get(id=customer_id)
@@ -165,6 +359,30 @@ class AddLoyaltyPointsView(APIView):
 class DeleteLoyaltyPointsView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(
+        operation_description="Elimina todos los puntos de lealtad de un cliente.",
+        responses={
+            status.HTTP_200_OK: openapi.Response(
+                description="Puntos eliminados exitosamente.",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'message': openapi.Schema(type=openapi.TYPE_STRING, description='Mensaje de éxito'),
+                    }
+                )
+            ),
+            status.HTTP_404_NOT_FOUND: openapi.Response(
+                description="Cliente no encontrado.",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'error': openapi.Schema(type=openapi.TYPE_STRING, description='Mensaje de error')
+                    }
+                )
+            ),
+        }
+    )
+
     def delete(self, request, customer_id, *args, **kwargs):
         try:
             customer = Customer.objects.get(id=customer_id)
@@ -179,6 +397,46 @@ class DeleteLoyaltyPointsView(APIView):
         }, status=status.HTTP_200_OK)
 
 class CreateCouponView(APIView):
+
+    @swagger_auto_schema(
+        operation_description="Crea un cupón de descuento para un cliente.",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'discount_amount': openapi.Schema(type=openapi.TYPE_NUMBER, format=openapi.FORMAT_FLOAT, description='Monto de descuento'),
+            },
+            required=['discount_amount']
+        ),
+        responses={
+            status.HTTP_201_CREATED: openapi.Response(
+                description="Cupón creado con éxito.",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'detail': openapi.Schema(type=openapi.TYPE_STRING, description='Mensaje de éxito'),
+                        'coupon': openapi.Schema(
+                            type=openapi.TYPE_OBJECT,
+                            properties={
+                                'id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID del cupón'),
+                                'discount_amount': openapi.Schema(type=openapi.TYPE_NUMBER, format=openapi.FORMAT_FLOAT, description='Monto de descuento'),
+                                'expires_at': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME, description='Fecha de expiración del cupón'),
+                            }
+                        )
+                    }
+                )
+            ),
+            status.HTTP_404_NOT_FOUND: openapi.Response(
+                description="Cliente no encontrado.",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'detail': openapi.Schema(type=openapi.TYPE_STRING, description='Mensaje de error')
+                    }
+                )
+            ),
+        }
+    )
+
     def post(self, request, *args, **kwargs):
         customer_id = kwargs.get('customer_id')
         discount_amount = request.data.get('discount_amount', 10.00)  # Descuento por defecto: 10 USD
@@ -204,6 +462,31 @@ class CreateCouponView(APIView):
         }, status=status.HTTP_201_CREATED)
     
 class DeleteCouponView(APIView):
+
+    @swagger_auto_schema(
+        operation_description="Elimina un cupón específico de un cliente.",
+        responses={
+            status.HTTP_200_OK: openapi.Response(
+                description="Cupón eliminado con éxito.",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'detail': openapi.Schema(type=openapi.TYPE_STRING, description='Mensaje de éxito')
+                    }
+                )
+            ),
+            status.HTTP_404_NOT_FOUND: openapi.Response(
+                description="Cupón no encontrado.",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'detail': openapi.Schema(type=openapi.TYPE_STRING, description='Mensaje de error')
+                    }
+                )
+            ),
+        }
+    )
+
     def delete(self, request, *args, **kwargs):
         coupon_id = kwargs.get('coupon_id')
         
@@ -219,6 +502,37 @@ class DeleteCouponView(APIView):
 
 class AssignPhoneNumberView(APIView):
     permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_description="Asigna un número de teléfono a un cliente. Requiere Berar Token",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'phone': openapi.Schema(type=openapi.TYPE_STRING, description='Número de teléfono del cliente')
+            },
+            required=['phone']
+        ),
+        responses={
+            status.HTTP_200_OK: openapi.Response(
+                description="Número de teléfono asignado exitosamente.",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'detail': openapi.Schema(type=openapi.TYPE_STRING, description='Mensaje de éxito')
+                    }
+                )
+            ),
+            status.HTTP_400_BAD_REQUEST: openapi.Response(
+                description="Error con la solicitud (número de teléfono inválido).",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'detail': openapi.Schema(type=openapi.TYPE_STRING, description='Mensaje de error')
+                    }
+                )
+            ),
+        }
+    )
 
     def post(self, request, *args, **kwargs):
         user = request.user
@@ -245,6 +559,37 @@ class AssignPhoneNumberView(APIView):
 class AssignAddressView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(
+        operation_description="Asigna una dirección a un cliente. requiere Bearer TOKEN",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'address': openapi.Schema(type=openapi.TYPE_STRING, description='Dirección del cliente')
+            },
+            required=['address']
+        ),
+        responses={
+            status.HTTP_200_OK: openapi.Response(
+                description="Dirección asignada exitosamente.",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'detail': openapi.Schema(type=openapi.TYPE_STRING, description='Mensaje de éxito')
+                    }
+                )
+            ),
+            status.HTTP_400_BAD_REQUEST: openapi.Response(
+                description="Error con la solicitud (dirección vacía).",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'detail': openapi.Schema(type=openapi.TYPE_STRING, description='Mensaje de error')
+                    }
+                )
+            ),
+        }
+    )
+
     def post(self, request, *args, **kwargs):
         user = request.user
 
@@ -270,6 +615,25 @@ class AssignAddressView(APIView):
 class CustomerProfileView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_description="Obtiene el perfil del cliente.",
+        responses={
+            status.HTTP_200_OK: openapi.Response(
+                description="Perfil del cliente obtenido exitosamente.",
+                schema=CustomerProfileSerializer
+            ),
+            status.HTTP_400_BAD_REQUEST: openapi.Response(
+                description="Error con la solicitud.",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'detail': openapi.Schema(type=openapi.TYPE_STRING, description='Mensaje de error')
+                    }
+                )
+            ),
+        }
+    )
 
     def get(self, request, *args, **kwargs):
         user = request.user

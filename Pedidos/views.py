@@ -11,9 +11,35 @@ from django.db import transaction
 from Authentication.models import BaseUser
 from django.db.models import Sum
 from django.shortcuts import get_object_or_404
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 class ProcesarPedidoAPIView(APIView):
     permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_description="Procesa un pedido realizado por un cliente, con la opción de usar puntos de lealtad y cupones.",
+        operation_id="procesar_pedido",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'address': openapi.Schema(type=openapi.TYPE_STRING, description="Dirección del cliente."),
+                'points_to_use': openapi.Schema(type=openapi.TYPE_INTEGER, description="Puntos de lealtad a usar (opcional)."),
+                'coupon_id': openapi.Schema(type=openapi.TYPE_INTEGER, description="ID del cupón (opcional).")
+            },
+        ),
+        responses={
+            201: openapi.Response('Pedido procesado exitosamente', openapi.Schema(type=openapi.TYPE_OBJECT, properties={
+                'message': openapi.Schema(type=openapi.TYPE_STRING),
+                'order_id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                'total_price': openapi.Schema(type=openapi.TYPE_NUMBER, format=openapi.FORMAT_FLOAT)
+            })),
+            400: openapi.Response('Error en el procesamiento del pedido', openapi.Schema(type=openapi.TYPE_OBJECT, properties={
+                'error': openapi.Schema(type=openapi.TYPE_STRING)
+            })),
+        },
+        security=[{'Bearer': []}]  # Indica que se necesita un token Bearer
+    )
 
     def post(self, request, *args, **kwargs):
         customer = get_object_or_404(Customer, user=request.user)
@@ -113,7 +139,54 @@ class ProcesarPedidoAPIView(APIView):
 
 #http://127.0.0.1:8000/pedidos/viewOrderUser/id/
 class VerPedidoAPIView(APIView):
-    
+    @swagger_auto_schema(
+        operation_description="Obtiene los detalles de un pedido específico del cliente autenticado.",
+        responses={
+            status.HTTP_200_OK: openapi.Response(
+                description="Detalles del pedido",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'order_id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                        'customer_id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                        'username': openapi.Schema(type=openapi.TYPE_STRING),
+                        'first_name': openapi.Schema(type=openapi.TYPE_STRING),
+                        'last_name': openapi.Schema(type=openapi.TYPE_STRING),
+                        'email': openapi.Schema(type=openapi.TYPE_STRING),
+                        'phone': openapi.Schema(type=openapi.TYPE_STRING),
+                        'address': openapi.Schema(type=openapi.TYPE_STRING),
+                        'total_price': openapi.Schema(type=openapi.TYPE_STRING),
+                        'food_items': openapi.Schema(
+                            type=openapi.TYPE_ARRAY,
+                            items=openapi.Items(
+                                type=openapi.TYPE_OBJECT,
+                                properties={
+                                    'food_item_name': openapi.Schema(type=openapi.TYPE_STRING),
+                                    'food_item_price': openapi.Schema(type=openapi.TYPE_NUMBER),
+                                    'quantity': openapi.Schema(type=openapi.TYPE_INTEGER),
+                                    'food_item_image': openapi.Schema(type=openapi.TYPE_STRING, nullable=True),
+                                    'food_item_description': openapi.Schema(type=openapi.TYPE_STRING),
+                                }
+                            )
+                        ),
+                        'status': openapi.Schema(type=openapi.TYPE_STRING)
+                    }
+                )
+            ),
+            status.HTTP_400_BAD_REQUEST: openapi.Response(
+                description="Error de validación o pedido no encontrado",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'error': openapi.Schema(type=openapi.TYPE_STRING)
+                    }
+                )
+            ),
+        },
+        security=[{'Bearer': []}]  # Indicamos que se requiere un Bearer token
+    )
+
+
     def get(self, request, *args, **kwargs):
         # Obtener el cliente autenticado
         customer = get_object_or_404(Customer, user=request.user)
@@ -158,6 +231,43 @@ class VerPedidoAPIView(APIView):
 class ListUserOrdersView(APIView):
     permission_classes = [IsAuthenticated]
 
+    @swagger_auto_schema(
+        operation_description="Obtiene todos los pedidos de un cliente autenticado.",
+        responses={
+            status.HTTP_200_OK: openapi.Response(
+                description="Lista de pedidos del cliente",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_ARRAY,
+                    items=openapi.Items(
+                        type=openapi.TYPE_OBJECT,
+                        properties={
+                            'order_id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                            'customer_id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                            'username': openapi.Schema(type=openapi.TYPE_STRING),
+                            'first_name': openapi.Schema(type=openapi.TYPE_STRING),
+                            'last_name': openapi.Schema(type=openapi.TYPE_STRING),
+                            'email': openapi.Schema(type=openapi.TYPE_STRING),
+                            'phone': openapi.Schema(type=openapi.TYPE_STRING),
+                            'address': openapi.Schema(type=openapi.TYPE_STRING),
+                            'total_price': openapi.Schema(type=openapi.TYPE_STRING),
+                            'status': openapi.Schema(type=openapi.TYPE_STRING)
+                        }
+                    )
+                )
+            ),
+            status.HTTP_400_BAD_REQUEST: openapi.Response(
+                description="Error al obtener los pedidos",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'error': openapi.Schema(type=openapi.TYPE_STRING)
+                    }
+                )
+            ),
+        },
+        security=[{'Bearer': []}]  # Indicamos que se requiere un Bearer token
+    )
+
     def get(self, request, *args, **kwargs):
         # Obtener el cliente autenticado
         customer = get_object_or_404(Customer, user=request.user)
@@ -187,6 +297,34 @@ class ListUserOrdersView(APIView):
 #http://127.0.0.1:8000/pedidos/cancelOrderUser/id/
 class CancelOrderView(APIView):
     permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_description="Cancela un pedido si no ha sido completado aún.",
+        responses={
+            status.HTTP_200_OK: openapi.Response(
+                description="Pedido cancelado exitosamente",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'order_id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                        'customer_id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                        'username': openapi.Schema(type=openapi.TYPE_STRING),
+                        'status': openapi.Schema(type=openapi.TYPE_STRING)
+                    }
+                )
+            ),
+            status.HTTP_400_BAD_REQUEST: openapi.Response(
+                description="Error al intentar cancelar el pedido",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'detail': openapi.Schema(type=openapi.TYPE_STRING)
+                    }
+                )
+            ),
+        },
+        security=[{'Bearer': []}]  # Requiere un Bearer token para autenticación
+    )
 
     def post(self, request, *args, **kwargs):
         # Obtener el cliente autenticado
@@ -222,6 +360,25 @@ class CancelOrderView(APIView):
 #http://127.0.0.1:8000/pedidos/deleteOrderUser/id/
 class DeleteOrderView(APIView):
     permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_description="Elimina un pedido si está cancelado o entregado.",
+        responses={
+            status.HTTP_204_NO_CONTENT: openapi.Response(
+                description="Pedido eliminado exitosamente"
+            ),
+            status.HTTP_400_BAD_REQUEST: openapi.Response(
+                description="El pedido debe ser cancelado o entregado para ser eliminado",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'detail': openapi.Schema(type=openapi.TYPE_STRING)
+                    }
+                )
+            ),
+        },
+        security=[{'Bearer': []}]  # Requiere un Bearer token para autenticación
+    )
 
     def delete(self, request, *args, **kwargs):
         # Obtener el cliente autenticado

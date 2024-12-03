@@ -5,8 +5,21 @@ from rest_framework import status
 from RestauranteData.Food_Item import FoodItem
 from RestauranteData.models import Restaurante
 from .serializer import FoodItemSerializer
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 class AddFoodItemToRestaurantView(APIView):
+
+    @swagger_auto_schema(
+        operation_description="Agregar un item de comida al restaurante con id 1.",
+        request_body=FoodItemSerializer,
+        responses={
+            201: openapi.Response(description="Item de comida agregado correctamente", examples={'application/json': {"message": "Food item agregado al restaurante exitosamente", "food_item_id": 1}}),
+            400: "Bad Request",
+            404: "Restaurante no encontrado"
+        }
+    )
+
     def post(self, request):
         serializer = FoodItemSerializer(data=request.data)
         if serializer.is_valid():
@@ -27,6 +40,14 @@ class AddFoodItemToRestaurantView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class GetAllFoodItemsView(APIView):
+
+    @swagger_auto_schema(
+        operation_description="Obtener todos los items de comida.",
+        responses={
+            200: FoodItemSerializer(many=True),
+        }
+    )
+
     def get(self,request):
         food_items = FoodItem.objects.all()
 
@@ -36,6 +57,12 @@ class GetAllFoodItemsView(APIView):
         return Response(serializer.data,status=status.HTTP_200_OK)
 
 class GetActiveFoodItemsView(APIView):
+    @swagger_auto_schema(
+        operation_description="Obtener los items de comida activos.",
+        responses={
+            200: FoodItemSerializer(many=True),
+        }
+    )
     def get(self, request):
         food_items = FoodItem.objects.filter(isActive=True)
         serializer = FoodItemSerializer(food_items, many=True)
@@ -44,6 +71,15 @@ class GetActiveFoodItemsView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 class DeleteFoodItemView(APIView):
+
+    @swagger_auto_schema(
+        operation_description="Eliminar un item de comida por su id.",
+        responses={
+            204: "No Content",
+            404: "Food item no encontrado",
+        }
+    )
+
     def delete(self, request, food_item_id):
         try:
             food_item = FoodItem.objects.get(id=food_item_id)
@@ -53,6 +89,20 @@ class DeleteFoodItemView(APIView):
             return Response({"error": "Food item no encontrado"}, status=status.HTTP_404_NOT_FOUND)
         
 class GetOneFoodItemView(APIView):
+
+    @swagger_auto_schema(
+        operation_description="Obtener un item de comida por su nombre y categoría.",
+        manual_parameters=[
+            openapi.Parameter('name', openapi.IN_QUERY, description="Nombre del item de comida", type=openapi.TYPE_STRING),
+            openapi.Parameter('category', openapi.IN_QUERY, description="Categoría del item de comida", type=openapi.TYPE_STRING),
+        ],
+        responses={
+            200: FoodItemSerializer,
+            400: "Bad Request",
+            404: "Food item no encontrado"
+        }
+    )
+
     def get(self, request):
         name = request.query_params.get('name')
         category = request.query_params.get('category')
@@ -70,6 +120,17 @@ class GetOneFoodItemView(APIView):
             return Response({"error": "Food item no encontrado"}, status=status.HTTP_404_NOT_FOUND)
         
 class EditFoodItemView(APIView):
+
+    @swagger_auto_schema(
+        operation_description="Actualizar los detalles de un item de comida por su id.",
+        request_body=FoodItemSerializer,
+        responses={
+            200: openapi.Response(description="Food item actualizado exitosamente", examples={'application/json': {"message": "Food item actualizado exitosamente", "food_item_id": 1}}),
+            404: "Food item no encontrado",
+            400: "Bad Request"
+        }
+    )
+
     def put(self, request, food_item_id):
         try:
             food_item = FoodItem.objects.get(id=food_item_id)
@@ -84,6 +145,15 @@ class EditFoodItemView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
 class GetOneFoodItemByIdView(APIView):
+
+    @swagger_auto_schema(
+        operation_description="Obtener un item de comida por su id.",
+        responses={
+            200: FoodItemSerializer,
+            404: "Food item no encontrado"
+        }
+    )
+
     def get(self, request, food_item_id):
         try:
             food_item = FoodItem.objects.get(id=food_item_id)
@@ -95,6 +165,22 @@ class GetOneFoodItemByIdView(APIView):
             return Response({"error": "Food item no encontrado"}, status=status.HTTP_404_NOT_FOUND)
 
 class ChangeFoodItemStatusView(APIView):
+
+    @swagger_auto_schema(
+        operation_description="Cambiar el estado de un item de comida.",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'isActive': openapi.Schema(type=openapi.TYPE_BOOLEAN)
+            }
+        ),
+        responses={
+            200: openapi.Response(description="Estado actualizado exitosamente"),
+            404: "Food item no encontrado",
+            400: "Bad Request"
+        }
+    )
+
     def post(self, request, fooditem_id):
         try:
             food_item = FoodItem.objects.get(id=fooditem_id)
@@ -110,3 +196,6 @@ class ChangeFoodItemStatusView(APIView):
             return Response({'message': f'El estado del FoodItem con id {fooditem_id} ha sido actualizado a {new_status} con éxito.'}, status=status.HTTP_200_OK)
         except FoodItem.DoesNotExist:
             return Response({'message': 'El FoodItem no existe.'}, status=status.HTTP_404_NOT_FOUND)
+
+
+

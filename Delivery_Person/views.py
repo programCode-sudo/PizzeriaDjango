@@ -9,8 +9,28 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import TokenAuthentication
 from Customer.models import Coupon,LoyaltyPoint,Customer
 from rest_framework_simplejwt.authentication import JWTAuthentication
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
+
+
 # Create your views here.
 class ActualizarEstadoDeliveryPersonAPIView(APIView):
+
+    @swagger_auto_schema(
+        operation_description="Actualiza el estado de 'is_online' de un repartidor",
+        responses={
+            200: openapi.Response('Estado actualizado con éxito'),
+            400: openapi.Response('Error: el valor de is_online debe ser 1 (True) o 0 (False)'),
+            404: openapi.Response('Error: el repartidor no existe')
+        },
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'is_online': openapi.Schema(type=openapi.TYPE_INTEGER, description="Estado del repartidor (1 o 0)"),
+            }
+        )
+    )
+
     def post(self, request, delivery_person_id, *args, **kwargs):
         try:
             # Obtener el repartidor por el ID
@@ -41,6 +61,37 @@ class VerPedidosPorRepartidorAPIView(APIView):
     authentication_classes=[JWTAuthentication]
     permission_classes = [IsAuthenticated]
     
+    @swagger_auto_schema(
+        operation_description="Obtiene los pedidos asociados al repartidor autenticado",
+        responses={
+            200: openapi.Response('Lista de pedidos', 
+                examples={
+                    "application/json": [
+                        {
+                            "id": 1,
+                            "created_at": "2024-12-03T10:00:00Z",
+                            "description": "Pedido de pizza",
+                            "address": "Calle 123",
+                            "status": "Pendiente",
+                            "customer_name": "Juan Pérez",
+                            "customer_email": "juan@example.com",
+                            "customer_phone": "123456789",
+                            "food_items": [
+                                {
+                                    "food_item_name": "Pizza Margherita",
+                                    "food_item_price": 10.00,
+                                    "quantity": 2,
+                                    "food_item_description": "Pizza con tomate y queso",
+                                    "food_item_image": "url-a-imagen.jpg"
+                                }
+                            ]
+                        }
+                    ]
+                }),
+            404: openapi.Response('Error: El repartidor no tiene pedidos asociados')
+        }
+    )
+
     def get(self, request, *args, **kwargs):
         # Asegurarse de que el usuario esté autenticado y que sea un repartidor
         try:
@@ -66,6 +117,22 @@ class CambiarEstadoPedidoAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     ESTADOS_VALIDOS = ['Cancelado','Entregado']
+
+    @swagger_auto_schema(
+        operation_description="Cambia el estado de un pedido asociado al repartidor autenticado",
+        responses={
+            200: openapi.Response('Estado del pedido actualizado con éxito'),
+            403: openapi.Response('Error: No tiene permiso para cambiar el estado de este pedido'),
+            400: openapi.Response('Error: Estado inválido'),
+            404: openapi.Response('Error: El pedido no existe')
+        },
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'status': openapi.Schema(type=openapi.TYPE_STRING, description="Nuevo estado del pedido")
+            }
+        )
+    )
 
     def post(self, request, pedido_id, *args, **kwargs):
         try:
@@ -120,6 +187,16 @@ class BorrarPedidoAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     ESTADOS_ELIMINABLES = ['Cancelado', 'Entregado']
+
+    @swagger_auto_schema(
+        operation_description="Elimina un pedido asociado al repartidor autenticado",
+        responses={
+            204: openapi.Response('Pedido eliminado con éxito'),
+            403: openapi.Response('Error: No tiene permiso para eliminar este pedido'),
+            400: openapi.Response('Error: No se puede eliminar el pedido debido a su estado'),
+            404: openapi.Response('Error: El pedido no existe')
+        }
+    )
 
     def delete(self, request, pedido_id, *args, **kwargs):
         try:

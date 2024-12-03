@@ -6,12 +6,52 @@ from Delivery_Person.models import Delivery_Person
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.db.models import Count
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 class ActualizarEstadoPedidoDispatcherAPIView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticated]
-
     ESTADOS_VALIDOS = ['Listo', 'InDelivery', 'Cocina']
+
+    @swagger_auto_schema(
+        operation_description="Actualizar el estado de un pedido por el dispatcher.",
+        operation_summary="Actualiza el estado de un pedido y asigna un repartidor si es necesario. Requiere TOKEN",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'status': openapi.Schema(type=openapi.TYPE_STRING, description="Nuevo estado del pedido.")
+            },
+            required=['status']
+        ),
+        responses={
+            status.HTTP_200_OK: openapi.Response(
+                description="El estado del pedido fue actualizado exitosamente.",
+                examples={
+                    "application/json": {
+                        "message": "Estado del pedido 1 actualizado a InDelivery con éxito. Asignado al repartidor juan123."
+                    }
+                }
+            ),
+            status.HTTP_400_BAD_REQUEST: openapi.Response(
+                description="Error: El estado del pedido es inválido o no se puede cambiar.",
+                examples={
+                    "application/json": {
+                        "message": "El pedido solo puede cambiar de Pendiente a Cocina."
+                    }
+                }
+            ),
+            status.HTTP_404_NOT_FOUND: openapi.Response(
+                description="Error: El pedido no existe.",
+                examples={
+                    "application/json": {
+                        "message": "El pedido no existe."
+                    }
+                }
+            )
+        }
+    )
+
 
     def post(self, request, pedido_id, *args, **kwargs):
         try:

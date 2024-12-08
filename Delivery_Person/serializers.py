@@ -12,4 +12,4 @@ class DeliveryPersonSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Delivery_Person
-        fields = ['first_name', 'last_name', 'email', 'role']
+        fields = ['id','first_name', 'last_name', 'email', 'role']

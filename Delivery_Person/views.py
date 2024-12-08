@@ -15,13 +15,15 @@ from drf_yasg import openapi
 
 # Create your views here.
 class ActualizarEstadoDeliveryPersonAPIView(APIView):
+    authentication_classes = [JWTAuthentication]  # Asegurar que se use JWT para autenticación
+    permission_classes = [IsAuthenticated]  # Solo usuarios autenticados pueden acceder
 
     @swagger_auto_schema(
-        operation_description="Actualiza el estado de 'is_online' de un repartidor",
+        operation_description="Actualiza el estado de 'is_online' de un repartidor basado en el token",
         responses={
             200: openapi.Response('Estado actualizado con éxito'),
             400: openapi.Response('Error: el valor de is_online debe ser 1 (True) o 0 (False)'),
-            404: openapi.Response('Error: el repartidor no existe')
+            404: openapi.Response('Error: El repartidor no está asociado al usuario o no existe')
         },
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
@@ -31,11 +33,11 @@ class ActualizarEstadoDeliveryPersonAPIView(APIView):
         )
     )
 
-    def post(self, request, delivery_person_id, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         try:
-            # Obtener el repartidor por el ID
-            delivery_person = Delivery_Person.objects.get(id=delivery_person_id)
-            
+            # Obtener el repartidor asociado al usuario autenticado
+            delivery_person = request.user.delivery_person  # Suponiendo que hay una relación de uno a uno
+
             # Obtener el valor de is_online desde el cuerpo de la solicitud
             is_online = request.data.get('is_online', None)
             
@@ -54,9 +56,10 @@ class ActualizarEstadoDeliveryPersonAPIView(APIView):
 
             return Response({'message': 'Estado de is_online actualizado con éxito.'}, status=status.HTTP_200_OK)
 
-        except Delivery_Person.DoesNotExist:
-            raise NotFound({'message': 'El repartidor no existe.'})
-        
+        except AttributeError:
+            # Si no hay un repartidor asociado al usuario
+            return Response({'message': 'El usuario no está asociado a un repartidor.'}, status=status.HTTP_404_NOT_FOUND)
+
 class VerPedidosPorRepartidorAPIView(APIView):
     authentication_classes=[JWTAuthentication]
     permission_classes = [IsAuthenticated]
